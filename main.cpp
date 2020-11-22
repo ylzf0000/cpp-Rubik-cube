@@ -22,7 +22,7 @@ enum Directions {
 const int CUBE_SIZE = 3;
 
 #define get_pos(arr, x, y, z) arr[x + 1][y + 1][z + 1]
-unordered_map<int, int> cube[3][3][3];
+//unordered_map<int, int> cube[3][3][3];
 unordered_map<int, int> target_cube[3][3][3];
 vector<int> cube_dirs[3][3][3];
 void init_cube_dirs() {
@@ -92,7 +92,7 @@ inline char get_color(unordered_map<int, int>(&cube)[3][3][3], int x, int y, int
 inline char get_color(unordered_map<int, int>(&cube)[3][3][3], const vector<int>& coord, int f) {
 	return get_color(cube, coord[0], coord[1], coord[2], f);
 }
-void rotate_cube(unordered_map<int, int>(&cube)[3][3][3], const vector<int>& center, bool clockwise) {
+void rotate_cube(unordered_map<int, int>(&cube)[3][3][3], const vector<int>& center, bool clockwise, bool show = false) {
 	assert(center.size() == 3);
 	int axis = -1;
 	for (int i = 0; i < 3; ++i)
@@ -166,6 +166,9 @@ void rotate_cube(unordered_map<int, int>(&cube)[3][3][3], const vector<int>& cen
 	for (const auto& coord : edge_coords) {
 		rotate_block(get_block(cube, coord));
 	}
+	void print_cube(unordered_map<int, int>(&cube)[3][3][3]);
+	if (show)
+		print_cube(cube);
 }
 
 void print_cube(unordered_map<int, int>(&cube)[3][3][3]) {
@@ -223,28 +226,28 @@ void print_cube(unordered_map<int, int>(&cube)[3][3][3]) {
 	cout << "----------Over\n\n";
 }
 
-inline auto &rotate_space() {
-	static unordered_map < string, function<void(unordered_map<int, int>(&)[3][3][3])>> fs = {
-		{"F",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,1},true); }},
-		{"F'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,1},false); }},
 
-		{"B",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,-1},true); }},
-		{"B'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,-1},false); }},
+static unordered_map<string, function<void(unordered_map<int, int>(&)[3][3][3])>> rotate_space = {
+	{"F",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,1},true); }},
+	{"F'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,1},false); }},
 
-		{"R",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{1,0,0},true); }},
-		{"R'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{1,0,0},false); }},
+	{"B",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,-1},true); }},
+	{"B'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,0,-1},false); }},
 
-		{"L",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{-1,0,0},true); }},
-		{"L'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{-1,0,0},false); }},
+	{"R",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{1,0,0},true); }},
+	{"R'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{1,0,0},false); }},
 
-		{"U",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,1,0},true); }},
-		{"U'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,1,0},false); }},
+	{"L",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{-1,0,0},true); }},
+	{"L'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{-1,0,0},false); }},
 
-		{"D",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,-1,0},true); }},
-		{"D'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,-1,0},false); }},
-	};
-	return fs;
-}
+	{"U",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,1,0},true); }},
+	{"U'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,1,0},false); }},
+
+	{"D",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,-1,0},true); }},
+	{"D'",[&](unordered_map<int, int>(&cube)[3][3][3]) {rotate_cube(cube,{0,-1,0},false); }},
+};
+
+
 
 bool is_reach_target(const unordered_map<int, int>(&cube)[3][3][3]) {
 	for (int i = 0; i < 3; ++i)
@@ -266,30 +269,88 @@ int distance_to_target(const unordered_map<int, int>(&cube)[3][3][3]) {
 	return res;
 }
 
+vector<string> opers;
+
+bool ida_star(int max_depth, int depth, unordered_map<int, int>(&cube)[3][3][3]) {
+	if (depth > max_depth)
+		return false;
+	if (is_reach_target(cube))
+		return true;
+	//if (depth + distance_to_target(cube) > max_depth)
+	//	return false;
+	for (const string& s : { "F","B","R","L","U","D" }) {
+		const string& s_ = s + "'";
+
+		rotate_space[s](cube);
+		if (ida_star(max_depth, depth + 1, cube)) {
+			opers.push_back(s);
+			return true;
+		}
+		rotate_space[s_](cube);
+		rotate_space[s_](cube);
+		if (ida_star(max_depth, depth + 1, cube)) {
+			opers.push_back(s_);
+			return true;
+		}
+		rotate_space[s](cube);
+	}
+	return false;
+}
+
 int main() {
 	init_cube_dirs();
 	init_target_cube();
-	print_cube(target_cube);
-	vector<string> vs = {
-		"F",
-		"F'",
-		"B",
-		"B'",
-		"R",
-		"R'",
-		"L",
-		"L'",
-		"U",
-		"U'",
-		"D",
-		"D'",
-	};
-	for (auto& s : vs) {
-		cout << "rotate: " << s << endl;
-		rotate_space()[s](target_cube);
-		print_cube(target_cube);
+	vector<string> vs = { "F","F'","B","B'","R","R'","L","L'","U","U'","D","D'", };
+
+	random_device rd;  //Will be used to obtain a seed for the random number engine
+	mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	uniform_int_distribution<> distrib(0, vs.size() - 1);
+
+	int n;
+	while (cin >> n) {
+		opers.clear();
+		// 初始化魔方
+		unordered_map<int, int> cube[3][3][3];
+		for (int i1 = 0; i1 < 3; ++i1)
+			for (int i2 = 0; i2 < 3; ++i2)
+				for (int i3 = 0; i3 < 3; ++i3)
+					cube[i1][i2][i3] = target_cube[i1][i2][i3];
+		// 随机生成魔方
+		cout << "generate " << n << " order: \n";
+		for (int i = 0; i < n; ++i) {
+			string op = vs[distrib(gen)];
+			cout << op << " ";
+			rotate_space[op](cube);
+		}
+		//cout << "\ncube:\n";
+		//print_cube(cube);
+		// 求解魔方
+		int max_depth = 20;
+		bool ret = false;
+		for (int depth = 1; depth <= max_depth; ++depth) {
+			if (ida_star(depth, 0, cube)) {
+				ret = true;
+				break;
+			}
+		}
+		//cout << "is_reach_target: " << is_reach_target(cube) << endl;
+		//cout << "distance_to_target: " << distance_to_target(cube) << endl;
+
+		//print_cube(cube);
+		puts("");
+		if (is_reach_target(cube)) {
+			for (int i = opers.size() - 1; i >= 0; --i)
+				cout << opers[i] << " ";
+			cout << endl;
+		}
 	}
-	cout << is_reach_target(target_cube);
-	cout << distance_to_target(target_cube);
+
+	return 0;
+	//for (auto& s : vs) {
+	//	cout << "rotate: " << s << endl;
+	//	rotate_space()[s](target_cube);
+	//	print_cube(target_cube);
+	//}
+
 }
 
